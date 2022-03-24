@@ -2,8 +2,6 @@
 # ohlc = ohlc.reshape((1, -1, 1))
 # print(ohlc)
 # print(model.predict(ohlc))
-
-from black import out
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.losses import BinaryCrossentropy
