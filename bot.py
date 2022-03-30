@@ -4,8 +4,8 @@
 # print(model.predict(ohlc))
 from keras.models import Sequential
 from keras.layers import Dense
-from keras.losses import BinaryCrossentropy
-from keras.metrics import BinaryAccuracy
+from keras.losses import CategoricalCrossentropy
+from keras.metrics import CategoricalAccuracy
 from collections import deque
 import random
 import numpy as np
@@ -86,14 +86,18 @@ if __name__ == "__main__":
 
     model.add(Dense(64, activation="relu", input_shape=(state_space,)))
     model.add(Dense(64, activation="relu"))
+    model.add(Dense(64, activation="relu"))
+    model.add(Dense(64, activation="relu"))
+    model.add(Dense(64, activation="relu"))
+    
 
     # output layer total 2 actions
     model.add(Dense(action_space, activation="softmax"))
 
     model.compile(
         optimizer="adam",
-        loss=BinaryCrossentropy(),
-        metrics=[BinaryAccuracy()],
+        loss=CategoricalCrossentropy(),
+        metrics=[CategoricalAccuracy()],
     )
 
     agent = DQNAgent(model)
