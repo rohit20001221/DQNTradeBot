@@ -6,10 +6,12 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.losses import CategoricalCrossentropy
 from keras.metrics import CategoricalAccuracy
+import tensorflow as tf
 from collections import deque
 import random
 import numpy as np
 from trade import TradeEnvironment
+import os
 
 # Deep Q Agent class
 class DQNAgent:
@@ -34,7 +36,7 @@ class DQNAgent:
         
         return self.environment.reset()
 
-    def train(self, episode_length=1000, num_episodes=10):
+    def train(self, episode_length=1000, num_episodes=10, callbacks=[]):
         for episode in range(num_episodes):
             # reset the environment before every episode
             s, stock_data = self.reset()
@@ -75,11 +77,20 @@ class DQNAgent:
             print(Y)
             # Y = np.asarray(Y).astype(np.float32)
 
-            self.model.fit(X, Y, epochs=10)
+            self.model.fit(X, Y, epochs=10, callbacks=callbacks)
 
 
 if __name__ == "__main__":
-    state_space = 7  # open, high, low, close, live_price, is_present, margin_ratio
+    CHECKPOINT_FOLDER = 'checkpoints'
+    CHECKPOINT_FILE_PATH = os.path.join(CHECKPOINT_FOLDER, 'weights.ckpt')
+    
+    cp_callback = tf.keras.callbacks.ModelCheckpoint(
+        filepath=CHECKPOINT_FILE_PATH,
+        save_weights_only=True,
+        verbose=1
+    )
+    
+    state_space = 6  # open, high, low, live_price, is_present, margin_ratio
     action_space = 3  # BUY, SELL, IDLE
 
     model = Sequential()
@@ -101,4 +112,4 @@ if __name__ == "__main__":
     )
 
     agent = DQNAgent(model)
-    agent.train()
+    agent.train(callbacks=[cp_callback])

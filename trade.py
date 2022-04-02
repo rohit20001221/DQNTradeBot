@@ -1,15 +1,24 @@
 import numpy as np
-import random
+from livedata.binance.adapter import BinanceAdapter
+from livedata.binance.client import BinanceClient
+import threading
 
 class TradeEnvironment:
     actions = ["BUY", "SELL", "IDLE"]
         
-    def __init__(self, margins=100000):
+    def __init__(self, client=BinanceClient(), adapter=BinanceAdapter("btcusdt"), margins=100000, symbol='btcusdt'):
         self.margins = margins
         self.initial_margins = margins
         self.positions = set()
         
+        self.symbol = symbol        
+        self.client = client
+        self.adapter = adapter
+        
+        threading.Thread(target=self.adapter.start).start()
+        
         self.data = self.data_generator()
+        
     
     def reset(self):
         self.margins = self.initial_margins
@@ -33,18 +42,20 @@ class TradeEnvironment:
         
         if action == "BUY":
             if stock_data["last_price"] < self.margins:
-                self.margins -= stock_data["last_price"]
-                reward = -1 * stock_data["last_price"]
+                self.margins -= stock_data["price"]
+                reward = -1 * stock_data["price"]
                 self.positions.add(stock_data["stock"])
+            else:
+                reward = 0
         elif action == "SELL":
             if stock_data["stock"] in self.positions:
-                self.margins += stock_data["last_price"]
+                self.margins += stock_data["price"]
                 self.positions.remove(stock_data["stock"])
                 reward = self.margins - self.initial_margins
             else:
-                reward = 21
+                reward = 0
         else:
-            reward = 21
+            reward = 0
         
         _data = next(self.data)
         
@@ -56,25 +67,28 @@ class TradeEnvironment:
             ]
         ).reshape(1, -1, 1)
         
-        return reward, data, _data
+        return reward / float(self.initial_margins), data, _data
         
     def data_generator(self):
-        stocks = ["A", "B", "C", "D", "E"]
-
         while True:
-            open_price = np.random.uniform()
-            high_price = np.random.uniform()
-            low_price = np.random.uniform()
-            close_price = np.random.uniform()
+            try:
+                price = self.client.get(self.symbol)
+            except:
+                continue
+            
+            open_price = price.open / price.weighted_average_price
+            high_price = price.high / price.weighted_average_price
+            low_price = price.low / price.weighted_average_price
 
-            last_price = np.random.uniform()
+            last_price = price.last_price / price.weighted_average_price
 
-            stock = random.choice(stocks)
+            stock = self.symbol
 
             data = {
-                "ohlc": [open_price, high_price, low_price, close_price],
+                "ohlc": [open_price, high_price, low_price],
                 "stock": stock,
                 "last_price": last_price,
+                "price": price.last_price
             }
 
             yield data
