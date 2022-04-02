@@ -6,12 +6,11 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.losses import CategoricalCrossentropy
 from keras.metrics import CategoricalAccuracy
-import tensorflow as tf
 from collections import deque
 import random
 import numpy as np
-from trade import TradeEnvironment
-import os
+from environment import TradeEnvironment
+import time
 
 # Deep Q Agent class
 class DQNAgent:
@@ -36,10 +35,11 @@ class DQNAgent:
         
         return self.environment.reset()
 
-    def train(self, episode_length=1000, num_episodes=10, callbacks=[]):
+    def train(self, episode_length=60, num_episodes=100, callbacks=[]):
         for episode in range(num_episodes):
             # reset the environment before every episode
-            s, stock_data = self.reset()
+            s = self.reset()
+            print(s)
 
             for transistion in range(episode_length):
                 if np.random.uniform() < self.mutation_rate:
@@ -50,8 +50,8 @@ class DQNAgent:
                 q_output = np.max(output)
                 index = np.argmax(output)
 
-                reward, s_, _stock_data = self.environment.perform(
-                    index, stock_data
+                reward, s_ = self.environment.perform(
+                    index
                 )
                 
                 optimal_q = np.max(list(self.model.predict(s_)).pop())
@@ -66,7 +66,9 @@ class DQNAgent:
                 self.memory["qvalues"].append(output)
                 
                 s = s_
-                stock_data = _stock_data
+                print(s)
+                
+                time.sleep(1)
 
             # train the model
             X = np.array(self.memory["states"])
@@ -77,20 +79,11 @@ class DQNAgent:
             print(Y)
             # Y = np.asarray(Y).astype(np.float32)
 
-            self.model.fit(X, Y, epochs=10, callbacks=callbacks)
+            self.model.fit(X, Y, epochs=5, callbacks=callbacks)
 
 
-if __name__ == "__main__":
-    CHECKPOINT_FOLDER = 'checkpoints'
-    CHECKPOINT_FILE_PATH = os.path.join(CHECKPOINT_FOLDER, 'weights.ckpt')
-    
-    cp_callback = tf.keras.callbacks.ModelCheckpoint(
-        filepath=CHECKPOINT_FILE_PATH,
-        save_weights_only=True,
-        verbose=1
-    )
-    
-    state_space = 6  # open, high, low, live_price, is_present, margin_ratio
+def create_model() -> Sequential:
+    state_space = 5  # open, high, low, close, is_present
     action_space = 3  # BUY, SELL, IDLE
 
     model = Sequential()
@@ -110,6 +103,5 @@ if __name__ == "__main__":
         loss=CategoricalCrossentropy(),
         metrics=[CategoricalAccuracy()],
     )
-
-    agent = DQNAgent(model)
-    agent.train(callbacks=[cp_callback])
+    
+    return model

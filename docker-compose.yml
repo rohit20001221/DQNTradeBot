@@ -1,0 +1,19 @@
+version: "3.3"
+
+services:
+  db:
+    image: redis:alpine
+
+  bot:
+    build: ./bot
+    volumes:
+      - ./bot:/app
+    depends_on:
+      - live
+
+  live:
+    build: ./live
+    volumes:
+      - ./live:/app
+    depends_on:
+      - db
