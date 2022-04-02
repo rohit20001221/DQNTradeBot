@@ -7,7 +7,6 @@ from keras.layers import Dense
 from keras.losses import CategoricalCrossentropy
 from keras.metrics import CategoricalAccuracy
 from collections import deque
-import random
 import numpy as np
 from environment import TradeEnvironment
 import time
@@ -19,15 +18,19 @@ class DQNAgent:
         model: Sequential,
         learning_rate=1e-2,
         gamma=0.8,
-        mutation_rate=0.04,
         environment=TradeEnvironment()
     ):
         self.model = model
         self.learning_rate = learning_rate
         self.gamma = gamma
-        self.mutation_rate = mutation_rate
+        
         self.memory = {"states": deque(), "qvalues": deque()}
         self.environment = environment
+
+        self.exploration_proba = 1
+        self.min_exploration_proab = 0.01
+        
+        self.decay_rate = 0.001
 
     def reset(self):
         self.memory["states"].clear()
@@ -35,15 +38,15 @@ class DQNAgent:
         
         return self.environment.reset()
 
-    def train(self, episode_length=60, num_episodes=100, callbacks=[]):
+    def train(self, episode_length=120, num_episodes=1000, callbacks=[]):
         for episode in range(num_episodes):
             # reset the environment before every episode
             s = self.reset()
             print(s)
 
             for transistion in range(episode_length):
-                if np.random.uniform() < self.mutation_rate:
-                    output = random.choice([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+                if np.random.uniform() < self.exploration_proba:
+                    output = self.environment.random()
                 else:
                     output = list(self.model.predict(s)).pop()
 
@@ -69,7 +72,9 @@ class DQNAgent:
                 print(s)
                 
                 time.sleep(1)
-
+            
+            self.exploration_proba = max(self.min_exploration_proab, np.exp(-self.decay_rate * episode))
+            
             # train the model
             X = np.array(self.memory["states"])
             print(X)
@@ -80,16 +85,15 @@ class DQNAgent:
             # Y = np.asarray(Y).astype(np.float32)
 
             self.model.fit(X, Y, epochs=5, callbacks=callbacks)
-
+            self.model.save("/app/checkpoints/model.h5")
 
 def create_model() -> Sequential:
-    state_space = 5  # open, high, low, close, is_present
+    state_space = 20  # open, high, low, close, is_present, margin_ratio
     action_space = 3  # BUY, SELL, IDLE
 
     model = Sequential()
 
     model.add(Dense(64, activation="relu", input_shape=(state_space,)))
-    model.add(Dense(64, activation="relu"))
     model.add(Dense(64, activation="relu"))
     model.add(Dense(64, activation="relu"))
     model.add(Dense(64, activation="relu"))
