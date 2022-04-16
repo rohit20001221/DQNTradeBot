@@ -23,19 +23,19 @@ class DQNAgent:
         self.model = model
         self.learning_rate = learning_rate
         self.gamma = gamma
-        
+
         self.memory = {"states": deque(), "qvalues": deque()}
         self.environment = environment
 
         self.exploration_proba = 1
         self.min_exploration_proab = 0.01
-        
+
         self.decay_rate = 0.001
 
     def reset(self):
         self.memory["states"].clear()
         self.memory["qvalues"].clear()
-        
+
         return self.environment.reset()
 
     def train(self, episode_length=120, num_episodes=1000, callbacks=[]):
@@ -56,7 +56,7 @@ class DQNAgent:
                 reward, s_ = self.environment.perform(
                     index
                 )
-                
+
                 optimal_q = np.max(list(self.model.predict(s_)).pop())
 
                 # use bellman equation to find the updated value of q
@@ -67,14 +67,14 @@ class DQNAgent:
                 output[index] = updated_q
                 self.memory["states"].append(s.reshape(-1, 1))
                 self.memory["qvalues"].append(output)
-                
+
                 s = s_
                 print(s)
-                
+
                 time.sleep(1)
-            
+
             self.exploration_proba = max(self.min_exploration_proab, np.exp(-self.decay_rate * episode))
-            
+
             # train the model
             X = np.array(self.memory["states"])
             print(X)

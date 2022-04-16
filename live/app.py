@@ -9,11 +9,11 @@ db = Redis(host="db", decode_responses=True)
 
 def on_message(ws, message):
     data = json.loads(message)
-    
+
     ticks = requests.get("https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1m").json()
     ticks = list(map(lambda x : {"open": x[1], "high": x[2], "low": x[3], "close": x[4]}, ticks))
     historical = pd.DataFrame(ticks)
-    
+
     data["indicators"] = {
         "slope": {
             "open": ta.TAN(historical["open"]).values[-1],
@@ -38,7 +38,7 @@ def on_message(ws, message):
             "dojistar": ta.CDLDOJISTAR(historical["open"], historical["high"], historical["low"], historical["close"]).values[-1] / 100,
         }
     }
-    db.set("btcusdt", json.dumps(data))        
+    db.set("btcusdt", json.dumps(data))
 
 def on_open(ws):
     print('[**] connection opened [**]')
